@@ -207,6 +207,7 @@ def __get_alt(open_set, new_marking):
 
 def __reconstruct_alignment(state, visited, queued, traversed, ret_tuple_as_trans_desc=False, lp_solved=0):
     alignment = list()
+    silent_occurence = {}
     if state.p is not None and state.t is not None:
         parent = state.p
         if ret_tuple_as_trans_desc:
@@ -218,10 +219,11 @@ def __reconstruct_alignment(state, visited, queued, traversed, ret_tuple_as_tran
             alignment = [state.t.label]
             while parent.p is not None:
                 alignment = [parent.t.label] + alignment
+                if parent.t.label[1] == None:
+                    silent_occurence[parent.t.name[1]] = silent_occurence.get(parent.t.name[1],0) + 1
                 parent = parent.p
     return {'alignment': alignment, 'cost': state.g, 'visited_states': visited, 'queued_states': queued,
-            'traversed_arcs': traversed, 'lp_solved': lp_solved}
-
+            'traversed_arcs': traversed, 'lp_solved': lp_solved, 'silent_occurence': silent_occurence}
 
 def __derive_heuristic(incidence_matrix, cost_vec, x, t, h):
     x_prime = x.copy()

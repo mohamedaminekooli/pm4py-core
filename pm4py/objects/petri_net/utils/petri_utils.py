@@ -25,6 +25,8 @@ from pm4py.objects.petri_net import semantics, properties
 from pm4py.objects.petri_net.obj import PetriNet, Marking, ResetNet, InhibitorNet
 from pm4py.objects.petri_net.saw_net.obj import StochasticArcWeightNet
 from pm4py.util import xes_constants as xes_util
+from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
+
 
 
 def is_sub_marking(sub_marking: Marking, marking: Marking) -> bool:
@@ -152,6 +154,25 @@ def remove_place(net: PetriNet, place: PetriNet.Place) -> PetriNet:
         net.places.remove(place)
     return net
 
+def add_arc_from_to_spn(fr, to, net: StochasticPetriNet) -> StochasticPetriNet.Arc:
+    """
+    Adds an arc from a specific element to another element in some net. Assumes from and to are in the net!
+
+    Parameters
+    ----------
+    fr: transition/place from
+    to:  transition/place to
+    net: net to use
+
+    Returns
+    -------
+    None
+    """
+    a = StochasticPetriNet.Arc(fr, to)
+    net.arcs.add(a)
+    to.in_arcs.add(a)
+    
+    return a
 
 def add_arc_from_to(fr, to, net: PetriNet, weight=1, type=None) -> PetriNet.Arc:
     """
