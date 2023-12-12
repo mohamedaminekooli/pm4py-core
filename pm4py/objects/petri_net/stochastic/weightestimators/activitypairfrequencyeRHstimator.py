@@ -13,6 +13,9 @@ from pm4py.objects.conversion.log import converter
 
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
+    START_TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_START_TIMESTAMP_KEY
+    TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
+    CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
 class FrequencyCalculator:
     def __init__(self, log: EventLog, parameters: Optional[Dict[Any, Any]] = None):
@@ -106,21 +109,28 @@ from pm4py.objects.log.obj import EventLog, Trace, Event, EventStream
 from pm4py.utils import get_properties, __event_log_deprecation_warning
 from pm4py.util.pandas_utils import check_is_pandas_dataframe, check_pandas_dataframe_columns
 import os
-def discover_stochastic_petrinet(log: Union[EventLog, pd.DataFrame], petri_net: PetriNet, initial_marking: Marking,
-                                               final_marking: Marking, activity_key: str = "concept:name", timestamp_key: str = "time:timestamp", case_id_key: str = "case:concept:name") -> Tuple[StochasticPetriNet, Marking, Marking]:
+from pm4py import util as pmutil
+from pm4py.util import xes_constants as xes_util
+from pm4py.objects.conversion.log import converter as log_converter
+
+def discover_stochastic_petrinet_activity_pair_rh_weight_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
+    if parameters is None:
+        parameters = {}
+    case_id_glue = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, pmutil.constants.CASE_CONCEPT_NAME)
+    activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters, xes_util.DEFAULT_NAME_KEY)
+    timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters, xes_util.DEFAULT_TIMESTAMP_KEY)
+
     if type(log) not in [pd.DataFrame, EventLog, EventStream]:
-        raise Exception(
-            "the method can be applied only to a traditional event log!")
+        raise Exception("the method can be applied only to a traditional event log!")
     __event_log_deprecation_warning(log)
-
-    spn_parameters = Parameters
-    parameters = get_properties(
-        log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
-
+    if type(log) is not pd.DataFrame:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     if check_is_pandas_dataframe(log):
-        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
-        discoverer = ActivityPairRHWeightEstimator()
-        return discoverer.estimate_weights_apply(log, petri_net)
+        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key,
+                                        case_id_key=case_id_glue)
+    discoverer = ActivityPairRHWeightEstimator()
+    return discoverer.estimate_weights_apply(log, petri_net)
     
 def use_inductive_miner_petrinet_discovery(log):
     tree = pm4py.discover_process_tree_inductive(log, noise_threshold=0.2)
@@ -138,7 +148,7 @@ from pm4py.objects.petri_net.obj import Marking
 from pm4py.objects.petri_net import properties as petri_properties
 from pm4py.util import exec_utils, constants
 from enum import Enum
-from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY, PARAMETER_CONSTANT_TIMESTAMP_KEY, DEFAULT_ARTIFICIAL_START_ACTIVITY, DEFAULT_ARTIFICIAL_END_ACTIVITY
+from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY, PARAMETER_CONSTANT_TIMESTAMP_KEY, DEFAULT_ARTIFICIAL_START_ACTIVITY, DEFAULT_ARTIFICIAL_END_ACTIVITY, STOCHASTIC_DISTRIBUTION
 
 
 class Parameters_view(Enum):
@@ -153,7 +163,7 @@ class Parameters_view(Enum):
     DECORATIONS = "decorations"
 
 
-def apply_algo(net:StochasticPetriNet, initial_marking, final_marking, decorations=None, parameters=None):
+def apply_algo(net:StochasticPetriNet, initial_marking, decorations=None, parameters=None):
     """
     Apply method for Petri net visualization (it calls the
     graphviz_visualization method)
@@ -164,8 +174,6 @@ def apply_algo(net:StochasticPetriNet, initial_marking, final_marking, decoratio
         Petri net
     initial_marking
         Initial marking
-    final_marking
-        Final marking
     decorations
         Decorations for elements in the Petri net
     parameters
@@ -188,11 +196,11 @@ def apply_algo(net:StochasticPetriNet, initial_marking, final_marking, decoratio
     if decorations is None:
         decorations = exec_utils.get_param_value(Parameters_view.DECORATIONS, parameters, None)
     return graphviz_visualization(net, image_format=image_format, initial_marking=initial_marking,
-                                  final_marking=final_marking, decorations=decorations, debug=debug,
+                                  decorations=decorations, debug=debug,
                                   set_rankdir=set_rankdir, font_size=font_size, bgcolor=bgcolor)
 
 
-def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_marking=None, final_marking=None, decorations=None,
+def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_marking=None, decorations=None,
                            debug=False, set_rankdir=None, font_size="12", bgcolor=constants.DEFAULT_BGCOLOR):
     """
     Provides visualization for the petrinet
@@ -205,8 +213,6 @@ def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_m
         Format that should be associated to the image
     initial_marking
         Initial marking of the Petri net
-    final_marking
-        Final marking of the Petri net
     decorations
         Decorations of the Petri net (says how element must be presented)
     debug
@@ -221,8 +227,6 @@ def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_m
     """
     if initial_marking is None:
         initial_marking = Marking()
-    if final_marking is None:
-        final_marking = Marking()
     if decorations is None:
         decorations = {}
 
@@ -279,16 +283,16 @@ def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_m
     # places
     # add places, in order by their (unique) name, to avoid undeterminism in the visualization
     places_sort_list_im = sorted([x for x in list(net.places) if x in initial_marking], key=lambda x: x.name)
-    places_sort_list_fm = sorted([x for x in list(net.places) if x in final_marking and not x in initial_marking],
+    places_sort_list_rest = sorted([x for x in list(net.places) if not x in initial_marking],
                                  key=lambda x: x.name)
-    places_sort_list_not_im_fm = sorted(
-        [x for x in list(net.places) if x not in initial_marking and x not in final_marking], key=lambda x: x.name)
+    places_sort_list_not_im_rest = sorted(
+        [x for x in list(net.places) if x not in initial_marking], key=lambda x: x.name)
     # making the addition happen in this order:
     # - first, the places belonging to the initial marking
-    # - after, the places not belonging neither to the initial marking and the final marking
-    # - at last, the places belonging to the final marking (but not to the initial marking)
-    # in this way, is more probable that the initial marking is on the left and the final on the right
-    places_sort_list = places_sort_list_im + places_sort_list_not_im_fm + places_sort_list_fm
+    # - after, the places not belonging to the initial marking
+    # - at last, the places not belonging to the initial marking
+    # in this way, is more probable that the initial marking is on the left and the rest on the right
+    places_sort_list = places_sort_list_im + places_sort_list_not_im_rest + places_sort_list_rest
 
     for p in places_sort_list:
         label = decorations[p]["label"] if p in decorations and "label" in decorations[p] else ""
@@ -300,9 +304,6 @@ def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_m
                 viz.node(str(id(p)), "<&#9679;>", fontsize="34", fixedsize='true', shape="circle", width='0.75', style="filled", fillcolor=fillcolor)
             else:
                 viz.node(str(id(p)), str(initial_marking[p]), fontsize="34", fixedsize='true', shape="circle", width='0.75', style="filled", fillcolor=fillcolor)
-        elif p in final_marking:
-            # <&#9632;>
-            viz.node(str(id(p)), "<&#9632;>", fontsize="32", shape='doublecircle', fixedsize='true', width='0.75', style="filled", fillcolor=fillcolor)
         else:
             if debug:
                 viz.node(str(id(p)), str(p.name), fontsize=font_size, shape="ellipse")
@@ -352,12 +353,12 @@ def graphviz_visualization(net:StochasticPetriNet, image_format="png", initial_m
 
 
 def view_stochastic_petri_net(petri_net: StochasticPetriNet, initial_marking: Optional[Marking] = None,
-                   final_marking: Optional[Marking] = None, format: str = constants.DEFAULT_FORMAT_GVIZ_VIEW, bgcolor: str = "white",
+                   format: str = constants.DEFAULT_FORMAT_GVIZ_VIEW, bgcolor: str = "white",
                    decorations: Dict[Any, Any] = None, debug: bool = False, rankdir: str = constants.DEFAULT_RANKDIR_GVIZ):
     format = str(format).lower()
     #from pm4py.visualization.petri_net import visualizer as pn_visualizer
-    gviz = apply(petri_net, initial_marking, final_marking,
-                               parameters={Variants.WO_DECORATION.value.Parameters.FORMAT: format, "bgcolor": bgcolor, "decorations": decorations, "debug": debug, "set_rankdir": rankdir})
+    gviz = apply(petri_net, initial_marking, parameters={Variants.WO_DECORATION.value.Parameters.FORMAT: format,
+                "bgcolor": bgcolor, "decorations": decorations, "debug": debug, "set_rankdir": rankdir})
     view(gviz)
 from pm4py.objects.conversion.log import converter as log_conversion
 from pm4py.visualization.common import gview
@@ -393,7 +394,7 @@ PERFORMANCE_GREEDY = Variants.PERFORMANCE_GREEDY
 ALIGNMENTS = Variants.ALIGNMENTS
 
 
-def apply(net: StochasticPetriNet, initial_marking: Marking = None, final_marking: Marking = None, log: Union[EventLog, EventStream, pd.DataFrame] = None, aggregated_statistics=None, parameters: Optional[Dict[Any, Any]] = None,
+def apply(net: StochasticPetriNet, initial_marking: Marking = None, log: Union[EventLog, EventStream, pd.DataFrame] = None, aggregated_statistics=None, parameters: Optional[Dict[Any, Any]] = None,
           variant=Variants.WO_DECORATION) -> graphviz.Digraph:
     if parameters is None:
         parameters = {}
@@ -402,11 +403,11 @@ def apply(net: StochasticPetriNet, initial_marking: Marking = None, final_markin
             log = dataframe_utils.convert_timestamp_columns_in_df(log)
 
         log = log_conversion.apply(log, parameters, log_conversion.TO_EVENT_LOG)
-    return apply_viz(net, initial_marking, final_marking, log=log,
+    return apply_viz(net, initial_marking, log=log,
                                                  aggregated_statistics=aggregated_statistics,
                                                  parameters=parameters)
 
-def apply_viz(net: PetriNet, initial_marking: Marking, final_marking: Marking, log: EventLog = None, aggregated_statistics=None, parameters: Optional[Dict[Union[str, Parameters], Any]] = None) -> graphviz.Digraph:
+def apply_viz(net: PetriNet, initial_marking: Marking, log: EventLog = None, aggregated_statistics=None, parameters: Optional[Dict[Union[str, Parameters], Any]] = None) -> graphviz.Digraph:
     """
     Apply method for Petri net visualization (it calls the graphviz_visualization
     method) adding performance representation obtained by token replay
@@ -417,8 +418,6 @@ def apply_viz(net: PetriNet, initial_marking: Marking, final_marking: Marking, l
         Petri net
     initial_marking
         Initial marking
-    final_marking
-        Final marking
     log
         (Optional) log
     aggregated_statistics
@@ -433,9 +432,9 @@ def apply_viz(net: PetriNet, initial_marking: Marking, final_marking: Marking, l
     """
     if aggregated_statistics is None:
         if log is not None:
-            aggregated_statistics = token_decoration_frequency.get_decorations(log, net, initial_marking, final_marking, parameters=parameters,
+            aggregated_statistics = token_decoration_frequency.get_decorations(log, net, initial_marking, parameters=parameters,
                                                     measure="performance")
-    return apply_algo(net, initial_marking, final_marking, parameters=parameters,
+    return apply_algo(net, initial_marking, parameters=parameters,
                            decorations=aggregated_statistics)
 
 def save(gviz: graphviz.Digraph, output_file_path: str, parameters=None):
@@ -466,5 +465,5 @@ def view(gviz: graphviz.Digraph, parameters=None):
 # Usage example:
 log = pm4py.read_xes(os.path.join("..", "tests", "input_data", "example_12.xes"))
 net, im, fm = use_inductive_miner_petrinet_discovery(log)
-spn = discover_stochastic_petrinet(log, net, im, fm)
+spn = discover_stochastic_petrinet_activity_pair_rh_weight_estimator(log, net)
 view_stochastic_petri_net(spn, im, format="svg")
