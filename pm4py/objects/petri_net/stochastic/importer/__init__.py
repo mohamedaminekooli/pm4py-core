@@ -15,4 +15,4 @@
     along with PM4Py.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-from pm4py.objects.petri_net.stochastic.importer import importer, variants
+from pm4py.objects.petri_net.stochastic.importer import importer_spn, variants

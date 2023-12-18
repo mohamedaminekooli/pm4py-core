@@ -16,7 +16,7 @@
 '''
 from enum import Enum
 
-from pm4py.objects.petri_net.stochastic.importer.variants import slpn
+from pm4py.objects.petri_net.stochastic.exporter.variants import slpn
 from pm4py.util import exec_utils
 
 
@@ -27,18 +27,21 @@ class Variants(Enum):
 SLPN = Variants.SLPN
 
 
-def apply(input_file_path, variant=SLPN, parameters=None):
+def apply(spn, initial_marking, output_filename, variant=SLPN):
     """
-    Import a Petri net from a PNML file
+    Export a Petri net along with an initial marking (and possibly a final marking) to an output file
 
     Parameters
     ------------
-    input_file_path
-        Input file path
-    parameters
-        Other parameters of the importer
+    spn
+        Stochastic Petri net
+    initial_marking
+        Initial marking
+    output_filename
+        Output filename
     variant
-        Variant of the algorithm to use, possible values:
+        Variant of the algorithm, possible values:
             - Variants.PNML
     """
-    return exec_utils.get_variant(variant).import_slpn(input_file_path, parameters=parameters)
+    return exec_utils.get_variant(variant).export_petri_to_spn(spn, initial_marking, output_filename)
+

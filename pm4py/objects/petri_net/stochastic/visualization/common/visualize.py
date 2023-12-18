@@ -22,10 +22,11 @@ from pm4py.objects.petri_net.obj import Marking
 from pm4py.objects.petri_net import properties as petri_properties
 from pm4py.util import exec_utils, constants
 from enum import Enum
-from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY, PARAMETER_CONSTANT_TIMESTAMP_KEY
+from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY, PARAMETER_CONSTANT_TIMESTAMP_KEY, DEFAULT_ARTIFICIAL_START_ACTIVITY, DEFAULT_ARTIFICIAL_END_ACTIVITY, STOCHASTIC_DISTRIBUTION
+from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 
 
-class Parameters(Enum):
+class Parameter(Enum):
     FORMAT = "format"
     DEBUG = "debug"
     RANKDIR = "set_rankdir"
@@ -37,21 +38,19 @@ class Parameters(Enum):
     DECORATIONS = "decorations"
 
 
-def apply(net, initial_marking, final_marking, decorations=None, parameters=None):
+def apply(spn:StochasticPetriNet, initial_marking, decorations=None, parameters=None):
     """
-    Apply method for Petri net visualization (it calls the
+    Apply method for Stochastic Petri net visualization (it calls the
     graphviz_visualization method)
 
     Parameters
     -----------
-    net
-        Petri net
+    spn
+        Stochastic Petri net
     initial_marking
         Initial marking
-    final_marking
-        Final marking
     decorations
-        Decorations for elements in the Petri net
+        Decorations for elements in the Stochastic Petri net
     parameters
         Algorithm parameters
 
@@ -63,37 +62,34 @@ def apply(net, initial_marking, final_marking, decorations=None, parameters=None
     if parameters is None:
         parameters = {}
 
-    image_format = exec_utils.get_param_value(Parameters.FORMAT, parameters, "png")
-    debug = exec_utils.get_param_value(Parameters.DEBUG, parameters, False)
-    set_rankdir = exec_utils.get_param_value(Parameters.RANKDIR, parameters, None)
-    font_size = exec_utils.get_param_value(Parameters.FONT_SIZE, parameters, "12")
-    bgcolor = exec_utils.get_param_value(Parameters.BGCOLOR, parameters, constants.DEFAULT_BGCOLOR)
+    image_format = exec_utils.get_param_value(Parameter.FORMAT, parameters, "png")
+    debug = exec_utils.get_param_value(Parameter.DEBUG, parameters, False)
+    set_rankdir = exec_utils.get_param_value(Parameter.RANKDIR, parameters, None)
+    font_size = exec_utils.get_param_value(Parameter.FONT_SIZE, parameters, "12")
+    bgcolor = exec_utils.get_param_value(Parameter.BGCOLOR, parameters, constants.DEFAULT_BGCOLOR)
 
     if decorations is None:
-        decorations = exec_utils.get_param_value(Parameters.DECORATIONS, parameters, None)
-
-    return graphviz_visualization(net, image_format=image_format, initial_marking=initial_marking,
-                                  final_marking=final_marking, decorations=decorations, debug=debug,
+        decorations = exec_utils.get_param_value(Parameter.DECORATIONS, parameters, None)
+    return graphviz_visualization(spn, image_format=image_format, initial_marking=initial_marking,
+                                  decorations=decorations, debug=debug,
                                   set_rankdir=set_rankdir, font_size=font_size, bgcolor=bgcolor)
 
 
-def graphviz_visualization(net, image_format="png", initial_marking=None, final_marking=None, decorations=None,
+def graphviz_visualization(spn:StochasticPetriNet, image_format="png", initial_marking=None, decorations=None,
                            debug=False, set_rankdir=None, font_size="12", bgcolor=constants.DEFAULT_BGCOLOR):
     """
     Provides visualization for the petrinet
 
     Parameters
     ----------
-    net: :class:`pm4py.entities.petri.petrinet.PetriNet`
-        Petri net
+    spn: :class:`pm4py.entities.petri.petrinet.PetriNet`
+        Stochastic Petri net
     image_format
         Format that should be associated to the image
     initial_marking
-        Initial marking of the Petri net
-    final_marking
-        Final marking of the Petri net
+        Initial marking of the Stochastic Petri net
     decorations
-        Decorations of the Petri net (says how element must be presented)
+        Decorations of the Stochastic Petri net (says how element must be presented)
     debug
         Enables debug mode
     set_rankdir
@@ -106,8 +102,6 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
     """
     if initial_marking is None:
         initial_marking = Marking()
-    if final_marking is None:
-        final_marking = Marking()
     if decorations is None:
         decorations = {}
 
@@ -116,7 +110,7 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
     filename = tempfile.NamedTemporaryFile(suffix='.gv')
     filename.close()
 
-    viz = Digraph(net.name, filename=filename.name, engine='dot', graph_attr={'bgcolor': bgcolor})
+    viz = Digraph(spn.name, filename=filename.name, engine='dot', graph_attr={'bgcolor': bgcolor})
     if set_rankdir:
         viz.graph_attr['rankdir'] = set_rankdir
     else:
@@ -124,7 +118,7 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
 
     # transitions
     viz.attr('node', shape='box')
-    for t in net.transitions:
+    for t in spn.transitions:
         label = decorations[t]["label"] if t in decorations and "label" in decorations[t] else ""
         fillcolor = decorations[t]["color"] if t in decorations and "color" in decorations[t] else None
         textcolor = "black"
@@ -143,6 +137,17 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
             else:
                 fillcolor = bgcolor
 
+        # Add transition weight to the label
+        weight = decorations[t]["weight"] if t in decorations and "weight" in decorations[t] else 1
+        if t.weight is not None:
+            weight = t.weight
+        if debug:
+            weight = t.weight
+        weight = str(weight)
+        label += f" ({weight})"
+        if t.label is None:
+            textcolor = "white"
+
         viz.node(str(id(t)), label, style='filled', fillcolor=fillcolor, border='1', fontsize=font_size, fontcolor=textcolor)
 
         if petri_properties.TRANS_GUARD in t.properties:
@@ -152,17 +157,17 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
 
     # places
     # add places, in order by their (unique) name, to avoid undeterminism in the visualization
-    places_sort_list_im = sorted([x for x in list(net.places) if x in initial_marking], key=lambda x: x.name)
-    places_sort_list_fm = sorted([x for x in list(net.places) if x in final_marking and not x in initial_marking],
+    places_sort_list_im = sorted([x for x in list(spn.places) if x in initial_marking], key=lambda x: x.name)
+    places_sort_list_rest = sorted([x for x in list(spn.places) if not x in initial_marking],
                                  key=lambda x: x.name)
-    places_sort_list_not_im_fm = sorted(
-        [x for x in list(net.places) if x not in initial_marking and x not in final_marking], key=lambda x: x.name)
+    places_sort_list_not_im_rest = sorted(
+        [x for x in list(spn.places) if x not in initial_marking], key=lambda x: x.name)
     # making the addition happen in this order:
     # - first, the places belonging to the initial marking
-    # - after, the places not belonging neither to the initial marking and the final marking
-    # - at last, the places belonging to the final marking (but not to the initial marking)
-    # in this way, is more probable that the initial marking is on the left and the final on the right
-    places_sort_list = places_sort_list_im + places_sort_list_not_im_fm + places_sort_list_fm
+    # - after, the places not belonging to the initial marking
+    # - at last, the places not belonging to the initial marking
+    # in this way, is more probable that the initial marking is on the left and the rest on the right
+    places_sort_list = places_sort_list_im + places_sort_list_not_im_rest + places_sort_list_rest
 
     for p in places_sort_list:
         label = decorations[p]["label"] if p in decorations and "label" in decorations[p] else ""
@@ -174,9 +179,6 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
                 viz.node(str(id(p)), "<&#9679;>", fontsize="34", fixedsize='true', shape="circle", width='0.75', style="filled", fillcolor=fillcolor)
             else:
                 viz.node(str(id(p)), str(initial_marking[p]), fontsize="34", fixedsize='true', shape="circle", width='0.75', style="filled", fillcolor=fillcolor)
-        elif p in final_marking:
-            # <&#9632;>
-            viz.node(str(id(p)), "<&#9632;>", fontsize="32", shape='doublecircle', fixedsize='true', width='0.75', style="filled", fillcolor=fillcolor)
         else:
             if debug:
                 viz.node(str(id(p)), str(p.name), fontsize=font_size, shape="ellipse")
@@ -188,7 +190,7 @@ def graphviz_visualization(net, image_format="png", initial_marking=None, final_
                     viz.node(str(id(p)), label, shape='circle', fixedsize='true', width='0.75', style="filled", fillcolor=fillcolor)
 
     # add arcs, in order by their source and target objects names, to avoid undeterminism in the visualization
-    arcs_sort_list = sorted(list(net.arcs), key=lambda x: (x.source.name, x.target.name))
+    arcs_sort_list = sorted(list(spn.arcs), key=lambda x: (x.source.name, x.target.name))
 
     # check if there is an arc with weight different than 1.
     # in that case, all the arcs in the visualization should have the arc weight visible

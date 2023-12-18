@@ -3,9 +3,24 @@ from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 from pm4py.objects.petri_net.obj import Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to_spn
 
-def import_slpn(file_path):
+def import_spn(file_path):
+    """
+    Import a Stochastic Petri net from an SLPN file
+
+    Parameters
+    ----------
+    input_file_path
+        Input file path
+
+    Returns
+    -----------
+    net
+        Petri net
+    im
+        Initial marking
+    """
     spn = StochasticPetriNet()
-    marking = Marking()
+    im = Marking()
     with open(file_path, 'r') as file:
         lines = file.readlines()
         idx = 0
@@ -69,15 +84,15 @@ def import_slpn(file_path):
                     place = StochasticPetriNet.Place(place_id)
                     spn.places.add(place)
                     if int((lines[idx].strip())):
-                        marking[place] = int(lines[idx].strip())
+                        im[place] = int(lines[idx].strip())
                     idx += 1
             elif not number_transitions:
                 number_transitions = int(line)
                 idx += 1
-    return spn, marking
-
+    return spn, im
+import os
 def import_spln_script():
-    spn, im = import_slpn(os.path.join("..", "tests", "input_data", "PetriNet.slpn"))
+    spn, im = import_spn(os.path.join("..", "tests", "input_data", "PetriNet.slpn"))
     view_stochastic_petri_net(spn, im, format="svg")
 
     for place in spn.places:

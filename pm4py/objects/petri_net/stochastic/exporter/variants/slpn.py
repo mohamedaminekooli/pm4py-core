@@ -26,11 +26,7 @@ from enum import Enum
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 
 
-
-class Parameters(Enum):
-    ENCODING = "encoding"
-    
-def export_petri_to_slpn(StochasticPetriNet: StochasticPetriNet, marking: Marking, output_filename):
+def export_petri_to_spn(StochasticPetriNet: StochasticPetriNet, im: Marking, output_filename):
     """
     Export a StochasticPetriNet to an SLPN file
 
@@ -38,7 +34,7 @@ def export_petri_to_slpn(StochasticPetriNet: StochasticPetriNet, marking: Markin
     ----------
     StochasticPetriNet: :class:`pm4py.entities.petri.petrinet.stochastic.StochasticPetriNet`
         StochasticPetriNet
-    marking: :class:`pm4py.entities.petri.petrinet.Marking`
+    im: :class:`pm4py.entities.petri.petrinet.Marking`
         Marking
     output_filename:
         Absolute output file name for saving the slpn file
@@ -51,12 +47,12 @@ def export_petri_to_slpn(StochasticPetriNet: StochasticPetriNet, marking: Markin
         file.write(f"# number of places\n{num_places}\n")
         # Write the initial marking
         file.write(f"# initial marking\n")
-        places_sort_list_im = sorted([x for x in list(StochasticPetriNet.places) if x in marking], key=lambda x: x.name)
+        places_sort_list_im = sorted([x for x in list(StochasticPetriNet.places) if x in im], key=lambda x: x.name)
         places_sort_list_not_im = sorted(
-        [x for x in list(StochasticPetriNet.places) if x not in marking], key=lambda x: x.name)
+        [x for x in list(StochasticPetriNet.places) if x not in im], key=lambda x: x.name)
         sorted_places = places_sort_list_im+places_sort_list_not_im
         for place in sorted_places:
-            marking_value = marking[place] if place in marking else 0
+            marking_value = im[place] if place in im else 0
             file.write(f"{marking_value}\n")
         # Write the number of transitions
         file.write(f"# number of transitions\n{num_transitions}\n")

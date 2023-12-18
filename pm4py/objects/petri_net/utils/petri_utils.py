@@ -154,25 +154,6 @@ def remove_place(net: PetriNet, place: PetriNet.Place) -> PetriNet:
         net.places.remove(place)
     return net
 
-def add_arc_from_to_spn(fr, to, net: StochasticPetriNet) -> StochasticPetriNet.Arc:
-    """
-    Adds an arc from a specific element to another element in some net. Assumes from and to are in the net!
-
-    Parameters
-    ----------
-    fr: transition/place from
-    to:  transition/place to
-    net: net to use
-
-    Returns
-    -------
-    None
-    """
-    a = StochasticPetriNet.Arc(fr, to)
-    net.arcs.add(a)
-    to.in_arcs.add(a)
-    
-    return a
 
 def add_arc_from_to(fr, to, net: PetriNet, weight=1, type=None) -> PetriNet.Arc:
     """
@@ -607,3 +588,24 @@ def remove_arc(net: PetriNet, arc: PetriNet.Arc) -> PetriNet:
     arc.target.in_arcs.remove(arc)
 
     return net
+
+
+def add_arc_from_to_spn(fr, to, net: StochasticPetriNet) -> StochasticPetriNet.Arc:
+    """
+    Adds an arc from a specific element to another element in some net. Assumes from and to are in the net!
+
+    Parameters
+    ----------
+    fr: transition/place from
+    to:  transition/place to
+    net: net to use
+
+    Returns
+    -------
+    None
+    """
+    a = StochasticPetriNet.Arc(fr, to)
+    net.arcs.add(a)
+    to.in_arcs.add(a)
+    
+    return a

@@ -550,7 +550,7 @@ net, im, fm = use_inductive_miner_petrinet_discovery(log)
 spn = discover_stochastic_petrinet_abstract_fraquency_estimator(log, net)
 view_stochastic_petri_net(spn, im, format="svg")
 
-from pm4py.objects.petri_net.stochastic.importer.importer import apply as apply_importer
+from pm4py.objects.petri_net.stochastic.importer.importer_spn import apply as apply_importer
 
 def import_spln_script():
     spn, im = import_slpn(os.path.join("..", "tests", "input_data", "PetriNet.slpn"))
@@ -558,7 +558,7 @@ def import_spln_script():
 
 #import_spln_script()
 
-from pm4py.objects.petri_net.stochastic.exporter.exporter import apply as apply_exporter
+from pm4py.objects.petri_net.stochastic.exporter.exporter_spn import apply as apply_exporter
 
 def export_spln_script():
     apply_exporter(spn, im, os.path.join("..", "tests", "test_output_data", "AbstractFrequencyEstimator_example_12.slpn"))

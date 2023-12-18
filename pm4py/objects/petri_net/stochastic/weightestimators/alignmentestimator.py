@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, 'C:\\Users\\nader\\OneDrive\\Bureau\\existing_pm4py\\pm4py-core')
 from pm4py.algo.conformance.alignments.petri_net import algorithm as alignment_algorithm
 from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.log.importer.xes import importer as xes_importer
@@ -18,6 +20,7 @@ from typing import Optional, Dict, Any
 from pm4py.objects.petri_net.obj import PetriNet
 from enum import Enum
 import pm4py
+from pm4py.objects.petri_net.stochastic.utils import align_utils 
 
 
 class Parameters(Enum):
@@ -43,7 +46,7 @@ class Alignmentestimator:
         params[param.PARAM_MODEL_COST_FUNCTION] = model_cost_function
         params[param.PARAM_TRACE_COST_FUNCTION] = trace_costs
         params[param.PARAM_SYNC_COST_FUNCTION] = sync_cost_function
-        return ali.petri_net.algorithm.apply(trace, net, im, fm, parameters=params)
+        return align_utils.apply(trace, net, im, fm, parameters=params)
 
     def walign(self):
         model_cost_function = dict()
