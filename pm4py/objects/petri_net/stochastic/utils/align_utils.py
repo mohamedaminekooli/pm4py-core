@@ -723,6 +723,8 @@ def __reconstruct_alignment(state, visited, queued, traversed, ret_tuple_as_tran
                 parent = parent.p
         else:
             alignment = [state.t.label]
+            if state.t.label[1] == None:
+                    silent_occurence[state.t.name[1]] = silent_occurence.get(state.t.name[1],0) + 1
             while parent.p is not None:
                 alignment = [parent.t.label] + alignment
                 if parent.t.label[1] == None:

@@ -14,8 +14,6 @@
     You should have received a copy of the GNU General Public License
     along with PM4Py.  If not, see <https://www.gnu.org/licenses/>.
 '''
-import sys
-sys.path.insert(0, 'C:\\Users\\nader\\OneDrive\\Bureau\\existing_pm4py\\pm4py-core')
 from pm4py.objects.conversion.log import converter as log_conversion
 from pm4py.visualization.common import gview
 from pm4py.visualization.common import save as gsave
@@ -33,9 +31,24 @@ import graphviz
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 import pm4py.objects.petri_net.stochastic.visualization.common.visualize as visualize
 
+class Variants(Enum):
+    WO_DECORATION = wo_decoration
+    FREQUENCY = token_decoration_frequency
+    PERFORMANCE = token_decoration_performance
+    FREQUENCY_GREEDY = greedy_decoration_frequency
+    PERFORMANCE_GREEDY = greedy_decoration_performance
+    ALIGNMENTS = alignments
+
+
+WO_DECORATION = Variants.WO_DECORATION
+FREQUENCY_DECORATION = Variants.FREQUENCY
+PERFORMANCE_DECORATION = Variants.PERFORMANCE
+FREQUENCY_GREEDY = Variants.FREQUENCY_GREEDY
+PERFORMANCE_GREEDY = Variants.PERFORMANCE_GREEDY
+ALIGNMENTS = Variants.ALIGNMENTS
 
 def apply(spn: StochasticPetriNet, initial_marking: Marking = None, log: Union[EventLog, EventStream, pd.DataFrame] = None, 
-          parameters: Optional[Dict[Any, Any]] = None) -> graphviz.Digraph:
+          aggregated_statistics=None, parameters: Optional[Dict[Any, Any]] = None) -> graphviz.Digraph:
     if parameters is None:
         parameters = {}
     if log is not None:
@@ -43,7 +56,11 @@ def apply(spn: StochasticPetriNet, initial_marking: Marking = None, log: Union[E
             log = dataframe_utils.convert_timestamp_columns_in_df(log)
 
         log = log_conversion.apply(log, parameters, log_conversion.TO_EVENT_LOG)
-    return visualize.apply(spn, initial_marking, parameters=parameters)
+    if aggregated_statistics is None:
+        if log is not None:
+            aggregated_statistics = token_decoration_frequency.get_decorations(log, spn, initial_marking, parameters=parameters,
+                                                measure="performance")
+    return visualize.apply(spn, initial_marking, parameters=parameters, decorations=aggregated_statistics)
 
 
 def save(gviz: graphviz.Digraph, output_file_path: str, parameters=None):

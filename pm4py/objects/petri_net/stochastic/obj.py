@@ -15,12 +15,17 @@
     along with PM4Py.  If not, see <https://www.gnu.org/licenses/>.
 '''
 
-from typing import Any, Collection, Dict
+from typing import Any, Collection, Dict, Optional
 
 from pm4py.objects.petri_net.obj import PetriNet
 
 
 class StochasticPetriNet(PetriNet):
+    def __init__(self, petri_net: Optional[PetriNet] = None):
+        if petri_net:
+            super().__init__(name=petri_net.name, places=petri_net.places, transitions=petri_net.transitions, arcs=petri_net.arcs)
+        else:
+            super().__init__()
 
     class Transition(PetriNet.Transition):
         def __init__(self, name: str, label: str = None, in_arcs: Collection[PetriNet.Arc] = None, out_arcs: Collection[PetriNet.Arc] = None, weight: float = 1.0, properties: Dict[str, Any] = None):

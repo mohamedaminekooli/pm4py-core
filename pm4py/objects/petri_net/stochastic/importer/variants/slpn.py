@@ -1,4 +1,3 @@
-from pm4py.objects.petri_net.stochastic.weightestimators.abstractfrequencyestimator import view_stochastic_petri_net
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 from pm4py.objects.petri_net.obj import Marking
 from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to_spn
@@ -14,8 +13,8 @@ def import_spn(file_path):
 
     Returns
     -----------
-    net
-        Petri net
+    spn
+        Stochastic Petri net
     im
         Initial marking
     """
@@ -34,7 +33,7 @@ def import_spn(file_path):
                 continue
             if line.startswith("label") or line.startswith("silent"):
                 name = f"t{j}"
-                label = line.split(" ")[1] if line.startswith("label") else None
+                label = line[len("label") + 1:].strip() if line.startswith("label") else None
                 transition = StochasticPetriNet.Transition(name, label)
                 spn.transitions.add(transition)
                 idx += 1
@@ -90,18 +89,3 @@ def import_spn(file_path):
                 number_transitions = int(line)
                 idx += 1
     return spn, im
-import os
-def import_spln_script():
-    spn, im = import_spn(os.path.join("..", "tests", "input_data", "PetriNet.slpn"))
-    view_stochastic_petri_net(spn, im, format="svg")
-
-    for place in spn.places:
-        print(place)
-    for transition in spn.transitions:
-        print(transition.name, transition.label, transition.weight)
-        print(transition.in_arcs)
-        for output_place in transition.out_arcs:
-            print(output_place, transition.name)
-    print(f"im: {im}")
-
-import_spln_script()
