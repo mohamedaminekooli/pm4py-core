@@ -21,13 +21,56 @@ from pm4py.objects.petri_net.obj import PetriNet
 
 
 class StochasticPetriNet(PetriNet):
+    """
+    Represents a Stochastic Petri Net, a subclass of the standard Petri Net.
+
+    This class extends the PetriNet class to include additional functionality
+    related to stochastic aspects.
+
+    Attributes:
+    - name (str): The name of the Stochastic Petri Net.
+    - places (Collection[Place]): Collection of places in the Petri Net.
+    - transitions (Collection[Transition]): Collection of transitions in the Petri Net.
+    - arcs (Collection[Arc]): Collection of arcs connecting places and transitions.
+
+    Methods:
+    - __init__(petri_net: Optional[PetriNet] = None): Constructor method. Initializes a StochasticPetriNet instance.
+    - Transition: Nested class representing transitions in the Stochastic Petri Net.
+
+    """
     def __init__(self, petri_net: Optional[PetriNet] = None):
+        """
+        Constructor method for StochasticPetriNet.
+
+        Parameters:
+        - petri_net (Optional[PetriNet]): An optional existing PetriNet instance to initialize the StochasticPetriNet.
+
+        """
         if petri_net:
             super().__init__(name=petri_net.name, places=petri_net.places, transitions=petri_net.transitions, arcs=petri_net.arcs)
         else:
             super().__init__()
 
     class Transition(PetriNet.Transition):
+        """
+        Represents a transition in the Stochastic Petri Net.
+
+        This class extends the Transition class from the PetriNet to include
+        additional attributes related to stochastic behavior.
+
+        Attributes:
+        - name (str): The name of the transition.
+        - label (str): The label associated with the transition.
+        - in_arcs (Collection[Arc]): Collection of arcs incoming to the transition.
+        - out_arcs (Collection[Arc]): Collection of arcs outgoing from the transition.
+        - weight (float): The weight or probability associated with the transition.
+        - properties (Dict[str, Any]): Additional properties of the transition.
+
+        Methods:
+        - __init__(name: str, label: str = None, in_arcs: Collection[Arc] = None, out_arcs: Collection[Arc] = None,
+                   weight: float = 1.0, properties: Dict[str, Any] = None): Constructor method for Transition.
+
+        """
         def __init__(self, name: str, label: str = None, in_arcs: Collection[PetriNet.Arc] = None, out_arcs: Collection[PetriNet.Arc] = None, weight: float = 1.0, properties: Dict[str, Any] = None):
             super().__init__(name, label, in_arcs, out_arcs, properties)
             self.__weight = weight

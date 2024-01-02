@@ -7,24 +7,52 @@ from typing import Optional, Dict, Any
 from pm4py.objects.petri_net.obj import PetriNet
 from enum import Enum
 
+# Enum class for defining parameters
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
     START_TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_START_TIMESTAMP_KEY
     TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
     CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
+# Abstract class for estimating transition weights based on activity frequencies
 class AbstractFrequencyEstimator:
     def __init__(self):
-        # Initialize a dictionary to store activity frequencies
+        """
+        Initializes the AbstractFrequencyEstimator object.
+
+        Attributes:
+        - activity_frequency: defaultdict(float) - Dictionary to store activity frequencies
+        """
         self.activity_frequency = defaultdict(float)
 
-    # Calculate transition weights based on event frequencies
     def estimate_weights_apply(self, log: EventLog, pn: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
+        """
+        Estimates transition weights based on activity frequencies.
+
+        Parameters:
+        - log: EventLog - Input event log
+        - pn: PetriNet - Input Petri net
+        - parameters: Optional[Dict[Any, Any]] - Optional parameters for configuration
+
+        Returns:
+        - spn: StochasticPetriNet - Stochastic Petri net with estimated transition weights
+        """
         self.activity_frequency = self.scan_log(log, pn, parameters)
         spn = StochasticPetriNet(pn)
         return self.estimate_weights_activity_frequencies(spn)
-    
+
     def scan_log(self, log: EventLog, pn: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
+        """
+        Scans the event log and updates the activity frequencies.
+
+        Parameters:
+        - log: EventLog - Input event log
+        - pn: PetriNet - Input Petri net
+        - parameters: Optional[Dict[Any, Any]] - Optional parameters for configuration
+
+        Returns:
+        - activities_occurrences: Dict[str, float] - Dictionary with activity and its corresponding frequency
+        """
         if parameters is None:
             parameters = {}
 
@@ -35,17 +63,32 @@ class AbstractFrequencyEstimator:
                 activities_occurrences[transition.label] = 1
         return activities_occurrences
 
-    # Assign weights to transitions based on event frequencies
     def estimate_weights_activity_frequencies(self, spn: StochasticPetriNet):
+        """
+        Assigns weights to transitions in a Stochastic Petri net based on activity frequencies.
+
+        Parameters:
+        - spn: StochasticPetriNet - Stochastic Petri net with transitions
+
+        Returns:
+        - spn: StochasticPetriNet - Stochastic Petri net with updated transition weights
+        """
         for transition in spn.transitions:
             weight = self.load_activity_frequency(transition)
             transition.weight = weight
         return spn
 
-    # Retrieve the frequency of a specific activity
     def load_activity_frequency(self, tran):
+        """
+        Retrieves the frequency of a specific activity.
+
+        Parameters:
+        - tran: Transition - Input transition object
+
+        Returns:
+        - frequency: float - Frequency of the activity
+        """
         activity = tran.label
         # Use a default value of 0.0 if the activity is not found in the log
         frequency = float(self.activity_frequency.get(activity, 0.0))
         return frequency
-

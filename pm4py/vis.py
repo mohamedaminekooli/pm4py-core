@@ -68,6 +68,40 @@ def view_petri_net(petri_net: PetriNet, initial_marking: Optional[Marking] = Non
                                parameters={pn_visualizer.Variants.WO_DECORATION.value.Parameters.FORMAT: format, "bgcolor": bgcolor, "decorations": decorations, "debug": debug, "set_rankdir": rankdir})
     pn_visualizer.view(gviz)
 
+from pm4py.objects.petri_net.stochastic.visualization import visualizer as spn_visualizer
+from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
+
+def view_stochastic_petri_net(petri_net: StochasticPetriNet, initial_marking: Optional[Marking] = None,
+                   format: str = constants.DEFAULT_FORMAT_GVIZ_VIEW, bgcolor: str = "white",
+                   decorations: Dict[Any, Any] = None, debug: bool = False, rankdir: str = constants.DEFAULT_RANKDIR_GVIZ):
+    """
+    Visualize a Stochastic Petri net using Graphviz.
+
+    Parameters
+    ----------
+    petri_net: StochasticPetriNet
+        Stochastic Petri net to visualize.
+    initial_marking: Optional[Marking]
+        Initial marking of the Stochastic Petri net.
+    format: str
+        Format of the output picture (if html is provided, GraphvizJS is used to render the visualization in an HTML page).
+    bgcolor: str
+        Background color of the visualization (default: white)
+    decorations: Dict[Any, Any]
+        Decorations (color, label) associated to the elements of the Stochastic Petri net.
+    debug: bool
+        Boolean enabling/disabling the debug mode (show place and transition's names)
+    rankdir: str
+        ets the direction of the graph ("LR" for left-to-right; "TB" for top-to-bottom)
+
+    Returns
+    -------
+    None
+    """
+    format = str(format).lower()
+    gviz = spn_visualizer.apply(petri_net, initial_marking, parameters={spn_visualizer.Variants.WO_DECORATION.value.Parameters.FORMAT: format,
+                "bgcolor": bgcolor, "decorations": decorations, "debug": debug, "set_rankdir": rankdir})
+    spn_visualizer.view(gviz)
 
 def save_vis_petri_net(petri_net: PetriNet, initial_marking: Marking, final_marking: Marking, file_path: str, bgcolor: str = "white",
                    decorations: Dict[Any, Any] = None, debug: bool = False, rankdir: str = constants.DEFAULT_RANKDIR_GVIZ):

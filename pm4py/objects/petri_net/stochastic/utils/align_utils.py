@@ -713,7 +713,7 @@ def add_markings(curr, add):
 
 def __reconstruct_alignment(state, visited, queued, traversed, ret_tuple_as_trans_desc=False, lp_solved=0):
     alignment = list()
-    silent_occurence = {}
+    silent_occurrence = {}
     if state.p is not None and state.t is not None:
         parent = state.p
         if ret_tuple_as_trans_desc:
@@ -724,14 +724,14 @@ def __reconstruct_alignment(state, visited, queued, traversed, ret_tuple_as_tran
         else:
             alignment = [state.t.label]
             if state.t.label[1] == None:
-                    silent_occurence[state.t.name[1]] = silent_occurence.get(state.t.name[1],0) + 1
+                    silent_occurrence[state.t.name[1]] = silent_occurrence.get(state.t.name[1],0) + 1
             while parent.p is not None:
                 alignment = [parent.t.label] + alignment
                 if parent.t.label[1] == None:
-                    silent_occurence[parent.t.name[1]] = silent_occurence.get(parent.t.name[1],0) + 1
+                    silent_occurrence[parent.t.name[1]] = silent_occurrence.get(parent.t.name[1],0) + 1
                 parent = parent.p
     return {'alignment': alignment, 'cost': state.g, 'visited_states': visited, 'queued_states': queued,
-            'traversed_arcs': traversed, 'lp_solved': lp_solved, 'silent_occurence': silent_occurence}
+            'traversed_arcs': traversed, 'lp_solved': lp_solved, 'silent_occurrence': silent_occurrence}
 
 def __derive_heuristic(incidence_matrix, cost_vec, x, t, h):
     x_prime = x.copy()

@@ -19,14 +19,12 @@ from pm4py.visualization.common import gview
 from pm4py.visualization.common import save as gsave
 from pm4py.visualization.petri_net.variants import wo_decoration, alignments, greedy_decoration_performance, \
     greedy_decoration_frequency, token_decoration_performance, token_decoration_frequency
-from pm4py.util import exec_utils
 from enum import Enum
 from pm4py.objects.petri_net.obj import Marking
 from typing import Optional, Dict, Any, Union
 from pm4py.objects.log.obj import EventLog, EventStream
 import pandas as pd
 from pm4py.objects.log.util import dataframe_utils
-from pm4py.visualization.common.gview import serialize, serialize_dot
 import graphviz
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 import pm4py.objects.petri_net.stochastic.visualization.common.visualize as visualize
@@ -49,6 +47,20 @@ ALIGNMENTS = Variants.ALIGNMENTS
 
 def apply(spn: StochasticPetriNet, initial_marking: Marking = None, log: Union[EventLog, EventStream, pd.DataFrame] = None, 
           aggregated_statistics=None, parameters: Optional[Dict[Any, Any]] = None) -> graphviz.Digraph:
+    """
+    Apply the Stochastic Petri Net visualization.
+
+    Parameters:
+    - spn: The Stochastic Petri Net.
+    - initial_marking: The initial marking of the Petri Net.
+    - log: The input log, which can be a Pandas DataFrame, EventLog, or EventStream.
+    - aggregated_statistics: Aggregated statistics for visualization.
+    - parameters: Optional parameters to customize the visualization.
+
+    Returns:
+    - graphviz.Digraph: Graphviz representation of the Stochastic Petri Net.
+
+    """
     if parameters is None:
         parameters = {}
     if log is not None:
@@ -65,38 +77,43 @@ def apply(spn: StochasticPetriNet, initial_marking: Marking = None, log: Union[E
 
 def save(gviz: graphviz.Digraph, output_file_path: str, parameters=None):
     """
-    Save the diagram
+    Save the Stochastic Petri Net visualization to a file.
 
-    Parameters
-    -----------
-    gviz
-        GraphViz diagram
-    output_file_path
-        Path where the GraphViz output should be saved
+    Parameters:
+    - gviz: GraphViz diagram.
+    - output_file_path: Path where the GraphViz output should be saved.
+    - parameters: Optional parameters.
+
     """
     gsave.save(gviz, output_file_path, parameters=parameters)
 
 
 def view(gviz: graphviz.Digraph, parameters=None):
     """
-    View the diagram
+    View the Stochastic Petri Net visualization.
 
-    Parameters
-    -----------
-    gviz
-        GraphViz diagram
+    Parameters:
+    - gviz: GraphViz diagram.
+    - parameters: Optional parameters.
+
+    Returns:
+    - View of the Stochastic Petri Net.
+
     """
     return gview.view(gviz, parameters=parameters)
 
 
 def matplotlib_view(gviz: graphviz.Digraph, parameters=None):
     """
-    Views the diagram using Matplotlib
+    View the Stochastic Petri Net visualization using Matplotlib.
 
-    Parameters
-    ---------------
-    gviz
-        Graphviz
+    Parameters:
+    - gviz: Graphviz representation.
+    - parameters: Optional parameters.
+
+    Returns:
+    - Matplotlib view of the Stochastic Petri Net.
+
     """
 
     return gview.matplotlib_view(gviz, parameters=parameters)

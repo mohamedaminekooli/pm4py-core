@@ -35,8 +35,6 @@ def apply(input_file_path, variant=SLPN):
     ------------
     input_file_path
         Input file path
-    parameters
-        Other parameters of the importer
     variant
         Variant of the algorithm to use, possible values:
             - Variants.SLPN

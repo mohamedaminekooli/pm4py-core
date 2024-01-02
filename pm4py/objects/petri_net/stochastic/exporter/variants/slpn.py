@@ -25,9 +25,9 @@ def export_petri_to_spn(StochasticPetriNet: StochasticPetriNet, im: Marking, out
 
     Parameters
     ----------
-    StochasticPetriNet: :class:`pm4py.entities.petri.petrinet.stochastic.StochasticPetriNet`
+    StochasticPetriNet: :class:`pm4py.objects.petri_net.stochastic.obj.StochasticPetriNet`
         StochasticPetriNet
-    im: :class:`pm4py.entities.petri.petrinet.Marking`
+    im: :class:`pm4py.objects.petri_net.obj.Marking`
         Marking
     output_filename:
         Absolute output file name for saving the slpn file
