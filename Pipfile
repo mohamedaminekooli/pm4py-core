@@ -19,6 +19,8 @@ scipy = "*"
 stringdist = "*"
 tqdm = "*"
 pyemd = "*"
+pymed = "*"
+sympy = "*"
 
 [dev-packages]
 

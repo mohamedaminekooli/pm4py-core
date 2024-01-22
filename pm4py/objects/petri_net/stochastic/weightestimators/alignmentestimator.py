@@ -74,7 +74,7 @@ class AlignmentEstimator:
             if transition.label is not None:
                 walign[transition] = sum(1 for alignment in alignments for event in alignment['alignment'] if event[1] == transition.label)
             else:
-                walign[transition] = silents_occurrences[transition.name]
+                walign[transition] = silents_occurrences.get(transition.name, 0.0)
 
         return walign
 

@@ -1,18 +1,40 @@
-import pm4py
+import os
+import xml.etree.ElementTree as ET
+import random
 
+def create_xes_file(input_file, output_file, num_traces):
+    tree = ET.parse(input_file)
+    root = tree.getroot()
 
-from pm4py.statistics.variants.log import get as variants_module
-log = pm4py.convert_to_event_log(log)
-language = variants_module.get_language(log)
-print(language)
-#net, im, fm = pm4py.discover_petri_net_alpha(log)
-from pm4py.algo.simulation.playout.petri_net import algorithm as simulator
-playout_log = simulator.apply(spn, im, parameters={simulator.Variants.STOCHASTIC_PLAYOUT.value.Parameters.LOG: log},
-                                variant=simulator.Variants.STOCHASTIC_PLAYOUT)
-print(playout_log)
-model_language = variants_module.get_language(playout_log)
-print(model_language)
+    # Get all traces from the original file
+    all_traces = root.findall('.//trace')
 
-from pm4py.algo.evaluation.earth_mover_distance import algorithm as emd_evaluator
-emd = emd_evaluator.apply(model_language, language)
-print(emd)
+    # Randomly select the desired number of traces
+    selected_traces = random.sample(all_traces, min(num_traces, len(all_traces)))
+
+    # Create a list of elements to remove
+    elements_to_remove = [trace for trace in all_traces if trace not in selected_traces]
+
+    # Remove the elements from the root
+    for element in elements_to_remove:
+        root.remove(element)
+
+    # Save the new file
+    tree.write(output_file, encoding='utf-8', xml_declaration=True)
+def apply():
+    # Specify input and output file paths
+    input_file_path = os.path.join("tests", "input_data", "example_12.xes")
+    output_file_1_trace = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_1_traces.xes")
+    output_file_10_traces = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_10_traces.xes")
+    output_file_100_traces = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_100_traces.xes")
+    output_file_1000_traces = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_1000_traces.xes")
+    output_file_10000_traces = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_10000_traces.xes")
+    output_file_100000_traces = os.path.join("pm4py", "objects", "petri_net", "stochastic", "output_file_100000_traces.xes")
+
+    # Create files with different numbers of traces
+    create_xes_file(input_file_path, output_file_1_trace, 1)
+    create_xes_file(input_file_path, output_file_10_traces, 10)
+    create_xes_file(input_file_path, output_file_100_traces, 100)
+    create_xes_file(input_file_path, output_file_1000_traces, 1000)
+    create_xes_file(input_file_path, output_file_10000_traces, 10000)
+    create_xes_file(input_file_path, output_file_100000_traces, 100000)

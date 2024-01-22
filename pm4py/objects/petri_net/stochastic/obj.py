@@ -47,7 +47,7 @@ class StochasticPetriNet(PetriNet):
 
         """
         if petri_net:
-            super().__init__(name=petri_net.name, places=petri_net.places, transitions=petri_net.transitions, arcs=petri_net.arcs)
+            super().__init__(name=petri_net.name, places=petri_net.places, transitions=petri_net.transitions, arcs=petri_net.arcs, properties=petri_net.properties)
         else:
             super().__init__()
 
