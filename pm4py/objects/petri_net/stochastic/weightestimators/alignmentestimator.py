@@ -28,7 +28,7 @@ class AlignmentEstimator:
         """
         # Initialize a dictionary to store activity frequencies
         self.activity_weights = defaultdict(float)
-        self.log = converter.apply(log, variant=converter.Variants.TO_EVENT_LOG)
+        self.log = log
         self.net = net
         self.im = im
         self.fm = fm

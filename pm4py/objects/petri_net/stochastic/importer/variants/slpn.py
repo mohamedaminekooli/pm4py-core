@@ -88,4 +88,12 @@ def import_spn(file_path):
             elif not number_transitions:
                 number_transitions = int(line)
                 idx += 1
+    for arc in spn.arcs:
+        for place in spn.places:
+            if str(arc.source)==place.name and arc not in place.out_arcs:
+                place.out_arcs.add(arc)
+    for arc in spn.arcs:
+        for tran in spn.transitions:
+            if str(arc.source)==f"{StochasticPetriNet.Transition(tran.name, tran.label)}" and arc not in tran.out_arcs:
+                tran.out_arcs.add(arc)
     return spn, im

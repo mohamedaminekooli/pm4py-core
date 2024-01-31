@@ -38,17 +38,20 @@ def check_log(log, parameters):
     """
     if parameters is None:
         parameters = {}
-    case_id_glue = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, pmutil.constants.CASE_CONCEPT_NAME)
+    case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, pmutil.constants.CASE_CONCEPT_NAME)
     activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters, xes_util.DEFAULT_NAME_KEY)
     timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters, xes_util.DEFAULT_TIMESTAMP_KEY)
 
     if type(log) not in [pd.DataFrame, EventLog, EventStream]:
         raise Exception("the method can be applied only to a traditional event log!")
-    #__event_log_deprecation_warning(log)
+    #__event_log_deprecation_warning(log) 
+    # if check_is_pandas_dataframe(log):
+    #     check_pandas_dataframe_columns(
+    #         log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
     if type(log) is not pd.DataFrame:
         log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     if check_is_pandas_dataframe(log):
-        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_glue)
+        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
     return log
 
 def discover_stochastic_petrinet_abstract_fraquency_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
@@ -155,7 +158,19 @@ petri_net: PetriNet, im: Marking, fm: Marking, parameters: Optional[Dict[Union[s
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    if parameters is None:
+        parameters = {}
+    case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, pmutil.constants.CASE_CONCEPT_NAME)
+    activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters, xes_util.DEFAULT_NAME_KEY)
+    timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters, xes_util.DEFAULT_TIMESTAMP_KEY)
+
+    if type(log) not in [pd.DataFrame, EventLog, EventStream]:
+        raise Exception("the method can be applied only to a traditional event log!")
+    if check_is_pandas_dataframe(log):
+        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
+
+    if type(log) is not EventLog:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
     discoverer = AlignmentEstimator(log, petri_net, im, fm)
     return discoverer.estimate_weights_apply(log=log, pn=petri_net)
 
