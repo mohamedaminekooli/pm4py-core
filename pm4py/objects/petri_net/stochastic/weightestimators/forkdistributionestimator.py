@@ -1,3 +1,4 @@
+from collections import defaultdict
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 from enum import Enum
 from pm4py.objects.log.obj import EventLog
@@ -28,7 +29,7 @@ class FrequencyCalculator:
         if parameters is None:
             parameters = {}
         self.parameters = parameters
-        self.log = converter.apply(log, variant=converter.Variants.TO_EVENT_LOG, parameters=self.parameters)
+        self.log = log
         self.pn = petrinet
         self.activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, self.parameters, xes.DEFAULT_NAME_KEY)
 
@@ -79,8 +80,10 @@ class FrequencyCalculator:
         weights_places = {}
         for place in self.pn.places:
             if place in im:
+                trace_count=0.0
                 for trace in self.log:
-                    weights_places[place] = weights_places.get(place, 0) + 1
+                    trace_count+=1
+                weights_places[place] = trace_count
             else:
                 input_transitions = [arc.source for arc in place.in_arcs]
                 output_transitions = [arc.target for arc in place.out_arcs]
@@ -126,8 +129,8 @@ class ForkDistributionEstimator:
         Parameters:
         - im: Initial marking of the Petri net
         """
-        self.place_weights = {}
-        self.activities_weights = {}
+        self.place_weights = defaultdict(float)
+        self.activities_weights = defaultdict(float)
         self.im = im
 
     def estimate_weights_apply(self, log: EventLog, pn: PetriNet):

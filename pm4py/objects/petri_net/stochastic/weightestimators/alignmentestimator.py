@@ -5,7 +5,6 @@ from pm4py.objects.log.obj import EventLog
 from pm4py.util import constants
 from enum import Enum
 from pm4py.objects.petri_net.stochastic.utils import align_utils
-from pm4py.objects.conversion.log import converter
 
 # Enum class for defining parameters
 class Parameters(Enum):
@@ -78,7 +77,7 @@ class AlignmentEstimator:
 
         return walign
 
-    def estimate_weights_apply(self, log: EventLog, pn: PetriNet):
+    def estimate_weights_apply(self, pn: PetriNet):
         """
         Estimates transition weights based on alignment results.
 

@@ -1,9 +1,11 @@
 from collections import defaultdict
+
+import pandas as pd
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
-from pm4py.objects.log.obj import EventLog
+from pm4py.objects.log.obj import EventLog, EventStream
 from pm4py.statistics.attributes.log import get as log_attributes
 from pm4py.util import constants, exec_utils, xes_constants as xes
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Union
 from pm4py.objects.petri_net.obj import PetriNet
 from enum import Enum
 
@@ -14,7 +16,7 @@ class Parameters(Enum):
     TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
     CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
-# Abstract class for estimating transition weights based on activity frequencies
+# Class for estimating transition weights based on activity frequencies
 class AbstractFrequencyEstimator:
     def __init__(self):
         """
@@ -23,7 +25,7 @@ class AbstractFrequencyEstimator:
         Attributes:
         - activity_frequency: defaultdict(float) - Dictionary to store activity frequencies
         """
-        self.activity_frequency = defaultdict(float)
+        self.activity_frequency = defaultdict(int)
 
     def estimate_weights_apply(self, log: EventLog, pn: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
         """
@@ -41,7 +43,7 @@ class AbstractFrequencyEstimator:
         spn = StochasticPetriNet(pn)
         return self.estimate_weights_activity_frequencies(spn)
 
-    def scan_log(self, log: EventLog, pn: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
+    def scan_log(self, log: Union[EventLog, pd.DataFrame, EventStream], pn: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
         """
         Scans the event log and updates the activity frequencies.
 
@@ -89,6 +91,6 @@ class AbstractFrequencyEstimator:
         - frequency: float - Frequency of the activity
         """
         activity = tran.label
-        # Use a default value of 0.0 if the activity is not found in the log
-        frequency = float(self.activity_frequency.get(activity, 0.0))
+        # Use a default value of 1.0 if the activity is not found in the log
+        frequency = float(self.activity_frequency.get(activity, 1.0))
         return frequency

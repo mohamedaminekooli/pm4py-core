@@ -44,17 +44,10 @@ def check_log(log, parameters):
 
     if type(log) not in [pd.DataFrame, EventLog, EventStream]:
         raise Exception("the method can be applied only to a traditional event log!")
-    #__event_log_deprecation_warning(log) 
-    # if check_is_pandas_dataframe(log):
-    #     check_pandas_dataframe_columns(
-    #         log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
-    if type(log) is not pd.DataFrame:
-        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     if check_is_pandas_dataframe(log):
         check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
-    return log
 
-def discover_stochastic_petrinet_abstract_fraquency_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+def discover_spn_abstract_fraquency_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
 petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using AbstractFrequencyEstimator.
@@ -68,11 +61,11 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    check_log(log, parameters)
     discoverer = AbstractFrequencyEstimator()
     return discoverer.estimate_weights_apply(log, petri_net)
 
-def discover_stochastic_petrinet_activity_pair_rh_weight_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+def discover_spn_activity_pair_rh_weight_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
 petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using ActivityPairRHWeightEstimator.
@@ -86,11 +79,13 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    check_log(log, parameters)
+    if type(log) is not pd.DataFrame:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     discoverer = ActivityPairRHWeightEstimator()
     return discoverer.estimate_weights_apply(log=log, pn=petri_net)
 
-def discover_stochastic_petrinet_activity_pair_lh_weight_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+def discover_spn_activity_pair_lh_weight_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
 petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using ActivityPairLHWeightEstimator.
@@ -104,11 +99,13 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    check_log(log, parameters)
+    if type(log) is not pd.DataFrame:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     discoverer = ActivityPairLHWeightEstimator()
     return discoverer.estimate_weights_apply(log, petri_net)
 
-def discover_stochastic_petrinet_forkdistributionestimator(log: Union[EventLog, pd.DataFrame, EventStream],
+def discover_spn_fork_distribution_estimator(log: Union[EventLog, pd.DataFrame, EventStream],
 petri_net: PetriNet, im: Marking, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using ForkDistributionEstimator.
@@ -122,11 +119,13 @@ petri_net: PetriNet, im: Marking, parameters: Optional[Dict[Union[str, Parameter
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    check_log(log, parameters)
+    if type(log) is not EventLog:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
     discoverer = ForkDistributionEstimator(im)
     return discoverer.estimate_weights_apply(log=log, pn=petri_net)
 
-def discover_stochastic_petrinet_meanscaledactivitypairfrequencyestimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+def discover_spn_mean_scaled_activity_pair_frequency_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
 petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using MeanScaledActivityPairFrequencyEstimator.
@@ -140,11 +139,13 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    log = check_log(log, parameters)
+    check_log(log, parameters)
+    if type(log) is not pd.DataFrame:
+        log = log_converter.apply(log, variant=log_converter.Variants.TO_DATA_FRAME, parameters=parameters)
     discoverer = MeanScaledActivityPairFrequencyEstimator()
     return discoverer.estimate_weights_apply(log=log, pn=petri_net)
 
-def discover_stochastic_petrinet_alignmentestimator(log: Union[EventLog, pd.DataFrame, EventStream], 
+def discover_spn_alignment_estimator(log: Union[EventLog, pd.DataFrame, EventStream], 
 petri_net: PetriNet, im: Marking, fm: Marking, parameters: Optional[Dict[Union[str, Parameters], Any]] = None ) -> StochasticPetriNet:
     """
     Discover stochastic weights using AlignmentEstimator.
@@ -158,21 +159,11 @@ petri_net: PetriNet, im: Marking, fm: Marking, parameters: Optional[Dict[Union[s
     - StochasticPetriNet: Petri Net with stochastic weights.
 
     """
-    if parameters is None:
-        parameters = {}
-    case_id_key = exec_utils.get_param_value(Parameters.CASE_ID_KEY, parameters, pmutil.constants.CASE_CONCEPT_NAME)
-    activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, parameters, xes_util.DEFAULT_NAME_KEY)
-    timestamp_key = exec_utils.get_param_value(Parameters.TIMESTAMP_KEY, parameters, xes_util.DEFAULT_TIMESTAMP_KEY)
-
-    if type(log) not in [pd.DataFrame, EventLog, EventStream]:
-        raise Exception("the method can be applied only to a traditional event log!")
-    if check_is_pandas_dataframe(log):
-        check_pandas_dataframe_columns(log, activity_key=activity_key, timestamp_key=timestamp_key, case_id_key=case_id_key)
-
+    check_log(log, parameters)
     if type(log) is not EventLog:
         log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
     discoverer = AlignmentEstimator(log, petri_net, im, fm)
-    return discoverer.estimate_weights_apply(log=log, pn=petri_net)
+    return discoverer.estimate_weights_apply(pn=petri_net)
 
 def use_inductive_miner_petrinet_discovery(log):
     tree = pm4py.discover_process_tree_inductive(log, noise_threshold=0.2)

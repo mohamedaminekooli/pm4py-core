@@ -1,13 +1,12 @@
+from collections import defaultdict
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 from enum import Enum
 from pm4py.objects.log.obj import EventLog
 from pm4py.util import constants, exec_utils, xes_constants as xes
 from typing import Optional, Dict, Any
 from pm4py.statistics.attributes.log import get as log_attributes
-from pm4py.statistics.start_activities.pandas import get as start_activities_get
-from pm4py.statistics.end_activities.pandas import get as end_activities_get
 from pm4py.objects.petri_net.obj import PetriNet
-from pm4py.objects.conversion.log import converter
+import pm4py
 
 # Enum class for defining parameters
 class Parameters(Enum):
@@ -33,27 +32,26 @@ class FrequencyCalculator:
         self.pn = petrinet
         self.parameters = parameters
 
-    def calculate_follows_frequency(self, current_activity, end_activities):
+    def calculate_follows_frequency(self, current_activity, dfg, start_activities):
         """
-        Calculates the frequency of transitions from a given activity to a set of end activities.
+        Calculates the frequency of an activity-pair from a given activity
 
         Parameters:
-        - current_activity: str - The activity to start the analysis from
-        - end_activities: List[str] - List of end activities to consider
+        - current_activity (str): The start activity in the activity-pair.
+        - dfg (Dict[Tuple[str, str], int]): A directed flow graph represented as a dictionary of activity-pair and their frequencies.
+        - start_activities (List[str]): List of start activities.
 
         Returns:
-        - follows_frequency: Dict[str, int] - Dictionary with activity and its corresponding frequency
+        - follows_frequency (Dict[str, int]): A dictionary with an activity and its corresponding activity-pair frequencies.
         """
         follows_frequency = {}
-        eventlog = converter.apply(self.log, variant=converter.Variants.TO_EVENT_LOG, parameters=self.parameters)
-        for trace in eventlog:
-            activities = [event["concept:name"] for event in trace]
-            for i in range(len(activities) - 1):
-                if activities[i] == current_activity and activities[i + 1] in end_activities:
-                    follows_frequency[current_activity] = follows_frequency.get(current_activity, 0) + 1
+        for (f, t) in dfg: 
+            if f == current_activity and (t, f) not in dfg:
+                if current_activity not in start_activities:
+                    follows_frequency[current_activity] = follows_frequency.get(current_activity, 0) + dfg[(f, t)]
         return follows_frequency
 
-    def calculate_start_frequency(self, current_activity):
+    def calculate_start_frequency(self, current_activity, start_activities):
         """
         Calculates the frequency of starting a process with a given activity.
 
@@ -64,14 +62,13 @@ class FrequencyCalculator:
         - start_frequency: Dict[str, int] - Dictionary with activity and its corresponding frequency
         """
         start_frequency = {}
-        start_activities = start_activities_get.get_start_activities(self.log, parameters=self.parameters)
         if current_activity in start_activities:
             start_frequency[current_activity] = start_activities[current_activity]
         else:
             start_frequency[current_activity] = 0
         return start_frequency
 
-    def calculate_end_frequency(self, current_activity):
+    def calculate_end_frequency(self, current_activity, end_activities):
         """
         Calculates the frequency of ending a process with a given activity.
 
@@ -82,14 +79,13 @@ class FrequencyCalculator:
         - end_frequency: Dict[str, int] - Dictionary with activity and its corresponding frequency
         """
         end_frequency = {}
-        end_activities = end_activities_get.get_end_activities(self.log, parameters=self.parameters)
         if current_activity in end_activities:
             end_frequency[current_activity] = end_activities[current_activity]
         else:
             end_frequency[current_activity] = 0
         return end_frequency
 
-    def calculate_wrhpair(self):
+    def calculate_wpairscale(self):
         """
         Calculates the weighted relative frequency of starting, ending, and following activities.
 
@@ -99,17 +95,17 @@ class FrequencyCalculator:
         activities_weights = {}
         activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, self.parameters, xes.DEFAULT_NAME_KEY)
         activities_occurrences = log_attributes.get_attribute_values(self.log, activity_key, parameters=self.parameters)
-        end_activities = end_activities_get.get_end_activities(self.log, parameters=self.parameters)
         activities = list(activities_occurrences.keys())
         events = sum(activities_occurrences.values())
+        dfg, start_activities, end_activities = pm4py.discover_dfg(self.log)
         for current_activity in activities:
-            start_frequency = self.calculate_start_frequency(current_activity)
-            end_frequency = self.calculate_end_frequency(current_activity)
-            follows_frequency = self.calculate_follows_frequency(current_activity, end_activities)
+            start_frequency = self.calculate_start_frequency(current_activity, start_activities)
+            end_frequency = self.calculate_end_frequency(current_activity, end_activities)
+            follows_frequency = self.calculate_follows_frequency(current_activity, dfg, start_activities)
             total_follows_frequency = follows_frequency[current_activity] if current_activity in follows_frequency else 0
             wrhpair = start_frequency[current_activity] + end_frequency[current_activity] + total_follows_frequency
             pairscale = wrhpair / (events / self.calculate_transitions(self.pn))
-            activities_weights[current_activity] = pairscale
+            activities_weights[current_activity] = pairscale if pairscale != 0.0 else 1.0
 
         return activities_weights
 
@@ -128,7 +124,7 @@ class FrequencyCalculator:
 # Class to estimate weights for transitions based on mean-scaled activity pair frequencies
 class MeanScaledActivityPairFrequencyEstimator:
     def __init__(self):
-        self.activities_weights = {}
+        self.activities_weights = defaultdict(float)
 
     def estimate_weights_apply(self, log: EventLog, pn: PetriNet):
         """
@@ -142,7 +138,7 @@ class MeanScaledActivityPairFrequencyEstimator:
         - spn: StochasticPetriNet - Stochastic Petri net with estimated transition weights
         """
         frequency_calculator = FrequencyCalculator(log, pn)
-        self.activities_weights = frequency_calculator.calculate_wrhpair()
+        self.activities_weights = frequency_calculator.calculate_wpairscale()
         spn = StochasticPetriNet(pn)
         return self.estimate_activity_pair_weights(spn)
 
@@ -172,6 +168,6 @@ class MeanScaledActivityPairFrequencyEstimator:
         - frequency: float - Frequency of the activity
         """
         activity = tran.label
-        # Use a default value of 0.0 if the activity is not found in the log
+        # Use a default value of 1.0 if the activity is not found in the log
         frequency = float(self.activities_weights.get(activity, 1))
         return frequency
