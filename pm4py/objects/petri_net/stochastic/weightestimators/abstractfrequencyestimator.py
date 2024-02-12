@@ -1,5 +1,4 @@
 from collections import defaultdict
-
 import pandas as pd
 from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
 from pm4py.objects.log.obj import EventLog, EventStream
@@ -9,21 +8,16 @@ from typing import Optional, Dict, Any, Union
 from pm4py.objects.petri_net.obj import PetriNet
 from enum import Enum
 
-# Enum class for defining parameters
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
-    START_TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_START_TIMESTAMP_KEY
-    TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
-    CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
-# Class for estimating transition weights based on activity frequencies
 class AbstractFrequencyEstimator:
     def __init__(self):
         """
         Initializes the AbstractFrequencyEstimator object.
 
         Attributes:
-        - activity_frequency: defaultdict(float) - Dictionary to store activity frequencies
+        - activity_frequency: defaultdict(int) - Dictionary to store activity frequencies
         """
         self.activity_frequency = defaultdict(int)
 
@@ -70,7 +64,7 @@ class AbstractFrequencyEstimator:
         Assigns weights to transitions in a Stochastic Petri net based on activity frequencies.
 
         Parameters:
-        - spn: StochasticPetriNet - Stochastic Petri net with transitions
+        - spn: StochasticPetriNet - Stochastic Petri net
 
         Returns:
         - spn: StochasticPetriNet - Stochastic Petri net with updated transition weights

@@ -6,16 +6,10 @@ from pm4py.util import constants, exec_utils, xes_constants as xes
 from typing import Optional, Dict, Any
 from pm4py.statistics.attributes.log import get as log_attributes
 from pm4py.objects.petri_net.obj import PetriNet
-from pm4py.objects.conversion.log import converter
 
-# Enum class for defining parameters
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
-    START_TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_START_TIMESTAMP_KEY
-    TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
-    CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
-# Class for calculating frequencies and weights for fork transitions in a Petri net
 class FrequencyCalculator:
     def __init__(self, log: EventLog, petrinet: PetriNet, parameters: Optional[Dict[Any, Any]] = None):
         """
@@ -33,18 +27,17 @@ class FrequencyCalculator:
         self.pn = petrinet
         self.activity_key = exec_utils.get_param_value(Parameters.ACTIVITY_KEY, self.parameters, xes.DEFAULT_NAME_KEY)
 
-    def scan_log(self, pn: PetriNet):
+    def scan_log(self):
         """
         Scans the event log and counts occurrences of activities.
 
         Parameters:
-        - pn: PetriNet - Input Petri net
 
         Returns:
         - activities_occurrences: Dict - Dictionary with activity occurrences
         """
         activities_occurrences = log_attributes.get_attribute_values(self.log, self.activity_key, parameters=self.parameters)
-        for transition in pn.transitions:
+        for transition in self.pn.transitions:
             if transition.label not in activities_occurrences:
                 activities_occurrences[transition.label] = 1
         return activities_occurrences
@@ -107,7 +100,7 @@ class FrequencyCalculator:
         - weight_fork: Dict - Dictionary with weights for fork transitions
         """
         weight_fork = {}
-        activity_frequency = self.scan_log(self.pn)
+        activity_frequency = self.scan_log()
         for transition in self.pn.transitions:
             input_places = [arc.source for arc in transition.in_arcs]
             for place in input_places:
@@ -135,7 +128,7 @@ class ForkDistributionEstimator:
 
     def estimate_weights_apply(self, log: EventLog, pn: PetriNet):
         """
-        Estimates weights for fork transitions based on the event log and Petri net.
+        Estimates weights for fork transitions based on fork distribution estimator.
 
         Parameters:
         - log: EventLog - Input event log

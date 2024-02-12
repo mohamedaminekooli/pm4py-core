@@ -1,25 +1,9 @@
-'''
-    This file is part of PM4Py (More Info: https://pm4py.fit.fraunhofer.de).
-
-    PM4Py is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    PM4Py is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with PM4Py.  If not, see <https://www.gnu.org/licenses/>.
-'''
 from copy import copy
 
 from pm4py.algo.conformance.alignments.petri_net import variants
 from pm4py.objects.petri_net.utils import check_soundness
 from pm4py.objects.conversion.log import converter as log_converter
-from pm4py.util.xes_constants import DEFAULT_NAME_KEY, DEFAULT_TRACEID_KEY
+from pm4py.util.xes_constants import DEFAULT_NAME_KEY
 from pm4py.objects.log.obj import Trace, Event
 import time
 from pm4py.util.lp import solver

@@ -6,7 +6,7 @@ from pm4py.objects.petri_net.obj import PetriNet, Marking
 from pm4py.objects.log.obj import EventLog, EventStream
 
 from pm4py.objects.petri_net.stochastic.weightestimators.abstractfrequencyestimator import AbstractFrequencyEstimator
-from pm4py.objects.petri_net.stochastic.weightestimators.activitypairfrequencyeRHstimator import ActivityPairRHWeightEstimator
+from pm4py.objects.petri_net.stochastic.weightestimators.activitypairfrequencyeRHestimator import ActivityPairRHWeightEstimator
 from pm4py.objects.petri_net.stochastic.weightestimators.activitypairfrequencyLHestimator import ActivityPairLHWeightEstimator
 from pm4py.objects.petri_net.stochastic.weightestimators.forkdistributionestimator import ForkDistributionEstimator
 from pm4py.objects.petri_net.stochastic.weightestimators.meanscaledactivitypairfrequencyestimator import MeanScaledActivityPairFrequencyEstimator
@@ -16,11 +16,9 @@ from pm4py.util.pandas_utils import check_is_pandas_dataframe, check_pandas_data
 from pm4py import util as pmutil
 from pm4py.util import constants, exec_utils, xes_constants as xes_util
 from pm4py.objects.conversion.log import converter as log_converter
-import pm4py
 
 class Parameters(Enum):
     ACTIVITY_KEY = constants.PARAMETER_CONSTANT_ACTIVITY_KEY
-    START_TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_START_TIMESTAMP_KEY
     TIMESTAMP_KEY = constants.PARAMETER_CONSTANT_TIMESTAMP_KEY
     CASE_ID_KEY = constants.PARAMETER_CONSTANT_CASEID_KEY
 
@@ -31,10 +29,6 @@ def check_log(log, parameters):
     Parameters:
     - log: The input log, which can be a Pandas DataFrame, EventLog, or EventStream.
     - parameters: Optional parameters to customize log checking.
-
-    Returns:
-    - log: The checked and formatted log.
-
     """
     if parameters is None:
         parameters = {}
@@ -58,8 +52,7 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     discoverer = AbstractFrequencyEstimator()
@@ -76,8 +69,7 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     if type(log) is not pd.DataFrame:
@@ -96,8 +88,7 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     if type(log) is not pd.DataFrame:
@@ -116,8 +107,7 @@ petri_net: PetriNet, im: Marking, parameters: Optional[Dict[Union[str, Parameter
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     if type(log) is not EventLog:
@@ -136,8 +126,7 @@ petri_net: PetriNet, parameters: Optional[Dict[Union[str, Parameters], Any]] = N
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     if type(log) is not pd.DataFrame:
@@ -156,17 +145,10 @@ petri_net: PetriNet, im: Marking, fm: Marking, parameters: Optional[Dict[Union[s
     - parameters: Optional parameters.
 
     Returns:
-    - StochasticPetriNet: Petri Net with stochastic weights.
-
+    - StochasticPetriNet: Stochastic Petri Net with weight estimation.
     """
     check_log(log, parameters)
     if type(log) is not EventLog:
         log = log_converter.apply(log, variant=log_converter.Variants.TO_EVENT_LOG, parameters=parameters)
     discoverer = AlignmentEstimator(log, petri_net, im, fm)
     return discoverer.estimate_weights_apply(pn=petri_net)
-
-def use_inductive_miner_petrinet_discovery(log):
-    tree = pm4py.discover_process_tree_inductive(log, noise_threshold=0.2)
-    #pm4py.view_process_tree(tree, format="svg")
-    net, im, fm = pm4py.convert_to_petri_net(tree)
-    return net, im, fm

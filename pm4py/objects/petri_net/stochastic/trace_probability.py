@@ -1,16 +1,20 @@
-import os
-import sys
-sys.path.insert(0, 'C:\\Users\\MohamedAmineKooli\\BA\\pm4py-core')
+from typing import Union
+
+import pandas as pd
+import pm4py
+from pm4py.objects import petri_net
+from pm4py.objects.log.obj import EventLog, EventStream, Trace, Event
+from pm4py.objects.petri_net.obj import Marking
+from pm4py.objects.petri_net.stochastic.obj import StochasticPetriNet
+from pm4py.objects.petri_net.stochastic.stochastic_transition_system.obj import StochasticTransitionSystem
 from pm4py.objects.petri_net.stochastic.utils import convert
+from pm4py.objects.transition_system import utils
+from pm4py.objects.transition_system.obj import TransitionSystem
+from pm4py.util import exec_utils
 from pm4py.util.constants import PARAMETER_CONSTANT_ACTIVITY_KEY
 from pm4py.util.xes_constants import DEFAULT_NAME_KEY
-from pm4py.objects import petri_net
-from pm4py.objects.log.obj import Trace, Event
-from pm4py.objects.petri_net.stochastic.stochastic_transition_system.stochastic_transition_system import StochasticTransitionSystem
-from sympy import symbols, Eq, solve
-import pm4py
-from pm4py.objects.transition_system import utils
-from pm4py.util import exec_utils
+from sympy import Eq, solve, symbols
+
 
 def extract_activities_from_trace(trace):
     """
@@ -24,7 +28,7 @@ def extract_activities_from_trace(trace):
     """
     return [event[DEFAULT_NAME_KEY] for event in trace]
 
-def construct_petri_net_from_trace(trace):
+def construct_petri_net_from_trace(trace: Trace):
     """
     Construct a Petri Net from a given trace.
 
@@ -53,30 +57,26 @@ def get_tran_label(tran):
     dfa_tran_name = tran[comma_index + 1: closing_parenthesis_index].strip()
     return dfa_tran_name
 
-def construct_product_system(dfa_ts, spn_ts):
+def construct_product_system(dfa_ts: TransitionSystem, spn_ts: StochasticTransitionSystem) -> StochasticTransitionSystem:
     """
     Construct the product system of a Deterministic Finite Automaton (DFA) and a Stochastic Transition System (SPN).
 
     Parameters:
     - dfa_ts: Transition system of the DFA
-    - spn_ts: Transition system of the SPN
+    - spn_ts: Stochastic Transition system of the SPN
 
     Returns:
     - product_system: StochasticTransitionSystem representing the product system
     """
     product_system = StochasticTransitionSystem()
-    dfa_im, dfa_fm, spn_im, spn_fm = [], [], [], []
+    dfa_im, spn_im = [], []
     for dfa_state in dfa_ts.states:
         if not dfa_state.incoming or str(dfa_state.incoming) == str({('skip', None)}):
             dfa_im.append(dfa_state)
-        if not dfa_state.outgoing or str(dfa_state.outgoing) == str({('skip', None)}):
-            dfa_fm.append(dfa_state)
             
     for spn_state in spn_ts.states:
         if not spn_state.incoming:
             spn_im.append(spn_state)
-        if not spn_state.outgoing:
-            spn_fm.append(spn_state)
 
     for spn_state in spn_ts.states:      
         for dfa_state in dfa_ts.states:
@@ -106,7 +106,7 @@ def construct_product_system(dfa_ts, spn_ts):
                         for current_dfa_state in dfa_ts.states:
                             if current_dfa_state.name == product_state.name.split(';')[1]:
                                 dfa_state=current_dfa_state
-                        # exist=False
+
                         for dfa_tran in dfa_state.outgoing:
                             if get_tran_label(str(dfa_tran)) == get_tran_label(product_transition_name):
                                 for tran_dfa in dfa_ts.transitions:
@@ -137,22 +137,20 @@ def construct_product_system(dfa_ts, spn_ts):
     return product_system
 
 
-from sympy import symbols, Eq, solve
-def get_system_equations(product_system, dfa_ts, ts):
+def get_system_equations(product_system: StochasticTransitionSystem, 
+                        dfa_ts: TransitionSystem, ts: StochasticTransitionSystem):
     """
     Get the system of equations for a product system.
 
     Parameters:
     - product_system: StochasticTransitionSystem representing the product system
     - dfa_ts: Transition system of the DFA
-    - ts: Transition system of the SPN
+    - ts: Stochastic Transition system of the SPN
 
     Returns:
     - List of equations
     """
     final_ts_states_name=[]
-    for tran in product_system.transitions:
-        print(f"{tran}: {tran.weight}")
     for dfa_state in dfa_ts.states:
         if len(dfa_state.outgoing) == 1:
             final_dfa_state_name = dfa_state.name
@@ -165,30 +163,23 @@ def get_system_equations(product_system, dfa_ts, ts):
         if not state.outgoing:
             if final_dfa_state_name == state.name.split(';')[1] and state.name.split(';')[0] in final_ts_states_name:
                 equation = Eq(x_state, 1.0)
-                print(f"{x_state} is final is 1.0")
             else:
                 equation = Eq(x_state, 0.0)
-                print(f"{x_state} is final is 0.0")
         else:
-            val=0.0
+            state_probability=0.0
             to_st=None
             for tran in state.outgoing:
                 weight=tran.weight
-                # print(state)
-                # print(tran)
                 for tr in product_system.transitions:
                     if tr.name==tran.name and str(tr.from_state)==state.name:
                         to_st=tr.to_state
-                #print(f"{tran}={weight}")
                         x = symbols(f'x_{to_st.name}')
-                        val+=weight*x
-            #print(f"{x_state}={val}")
-            print(f"{x_state} is {val}")
-            equation = Eq(x_state, val)
+                        state_probability+=weight*x
+            equation = Eq(x_state, state_probability)
         equations.append(equation)
     return equations
 
-def add_silent_tran_to_reachability_graph(dfa_ts):
+def add_silent_tran_to_reachability_graph(dfa_ts: TransitionSystem) -> TransitionSystem:
     """
     Add silent transitions to the reachability graph of a Deterministic Finite Automaton (DFA).
 
@@ -202,7 +193,7 @@ def add_silent_tran_to_reachability_graph(dfa_ts):
             utils.add_arc_from_to(name=str(("skip", None)), fr=state, to=state, ts=dfa_ts)
     return dfa_ts
 
-def compute_proba_from_trace(spn, im, trace):
+def compute_proba_from_trace(spn: StochasticPetriNet, im: Marking, trace: Trace):
     """
     Compute the probability of a trace in a Stochastic Petri Net (SPN).
 
@@ -220,55 +211,47 @@ def compute_proba_from_trace(spn, im, trace):
             raise Exception("the method can be applied only to a trace with events corresponding to the existing transition labels of the spn!")
     activity_key = exec_utils.get_param_value(PARAMETER_CONSTANT_ACTIVITY_KEY, parameters=None, default=DEFAULT_NAME_KEY)
     ts = convert.construct_reachability_graph(spn, im)
-    # show ts
-    from pm4py.objects.petri_net.stochastic.stochastic_transition_system import visualizer as ts_visualizer
-    gviz = ts_visualizer.apply(ts, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-    ts_visualizer.view(gviz)
+
     case=Trace()
     for act in trace:
         case.append(Event({activity_key: act.strip()}))
     net, im, fm = construct_petri_net_from_trace(case)
     dfa_ts = pm4py.convert_to_reachability_graph(net, im, fm)
     dfa_ts = add_silent_tran_to_reachability_graph(dfa_ts)
-    # show dfa_ts
-    from pm4py.visualization.transition_system import visualizer as ts_visualizer
-    gviz = ts_visualizer.apply(dfa_ts, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-    ts_visualizer.view(gviz)
+    
     product_system = construct_product_system(dfa_ts, ts)
-    # show product_system
-    from pm4py.objects.petri_net.stochastic.stochastic_transition_system import visualizer as ts_visualizer
-    gviz = ts_visualizer.apply(product_system, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-    ts_visualizer.view(gviz)
+    
     unknowns = symbols([f'x_{state.name}' for state in product_system.states])
     equations = get_system_equations(product_system, dfa_ts, ts)
     # Solve the system of equations
     solution = solve(equations, unknowns, dict=True)
-
     for variable, value in solution[0].items():
-        # print(f"{variable} = {value}")
         for product_state in product_system.states:
             if not product_state.incoming:
                 if product_state.name in str(variable):
                     probability = value
     return probability
 
-def compute_traces_probability(log,spn,im):
+def compute_traces_probability(log: Union[EventLog, pd.DataFrame, EventStream], 
+                               spn: StochasticPetriNet, im: Marking):
     """
-    Compute the probabilities of traces in a log using a Stochastic Petri Net (SPN).
+    Compute the probabilities of traces of a log in a Stochastic Petri Net (SPN).
 
     Parameters:
     - log: Input event log
-    - spn: Stochastic Petri Net (SPN)
+    - spn: Stochastic Petri Net
     - im: Initial marking
 
     Returns:
     - Dictionary containing probabilities for each trace
     """
+    if type(log) not in [pd.DataFrame, EventLog, EventStream]:
+        raise Exception("the method can be applied only to a traditional event log!")
+    if type(log) is not EventLog:
+        log=pm4py.convert_to_event_log(log)
+
     ts = convert.construct_reachability_graph(spn, im)
-    # show ts
-    from pm4py.objects.petri_net.stochastic.stochastic_transition_system import visualizer as ts_visualizer
-    gviz = ts_visualizer.apply(ts, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-    ts_visualizer.view(gviz)
+    
     variants = {}
     for trace in log:
         # Extract activities from the trace
@@ -278,26 +261,17 @@ def compute_traces_probability(log,spn,im):
         net, im, fm = construct_petri_net_from_trace(trace)
         dfa_ts = pm4py.convert_to_reachability_graph(net, im, fm)
         dfa_ts = add_silent_tran_to_reachability_graph(dfa_ts)
-        # show dfa_ts
-        from pm4py.visualization.transition_system import visualizer as ts_visualizer
-        gviz = ts_visualizer.apply(dfa_ts, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-        ts_visualizer.view(gviz)
+
         product_system = construct_product_system(dfa_ts, ts)
-        # show product_system
-        from pm4py.objects.petri_net.stochastic.stochastic_transition_system import visualizer as ts_visualizer
-        gviz = ts_visualizer.apply(product_system, parameters={ts_visualizer.Variants.VIEW_BASED.value.Parameters.FORMAT: "svg"})
-        ts_visualizer.view(gviz)
+
         unknowns = symbols([f'x_{state.name}' for state in product_system.states])
-        print(f"unknowns: {unknowns}")
         equations = get_system_equations(product_system, dfa_ts, ts)
         # Solve the system of equations
         solution = solve(equations, unknowns, dict=True)
         
         for variable, value in solution[0].items():
-            #print(f"{variable} = {value}")
             for product_state in product_system.states:
                 if not product_state.incoming:
                     if product_state.name in str(variable):
                         variants[activities] = value
-                        print(f"The probability of the trace {activities} is {value}")
     return variants
